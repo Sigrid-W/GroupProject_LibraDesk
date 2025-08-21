@@ -1,0 +1,270 @@
+﻿
+@page "/rentals"
+@using LibraDesk.Models
+@using Microsoft.Data.SqlClient
+
+<div class="page-container">
+    <h3>Book Renting System</h3>
+
+    <!-- Search / Rent / Return Section -->
+    <div class="form-section">
+        <div class="form-row">
+            <div class="form-field">
+                <label>Book Name</label>
+                <input @bind="rentBookName" placeholder="Book Name" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <button class="btn" @onclick="() =>SearchBooks(rentBookName)">Search Book</button>
+        </div>
+    </div>
+
+    <!-- Book List -->
+    <ul class="results-list">
+        @foreach (var temp in books)
+        {
+            <button @onclick="() => SelectBook(temp)">
+                    @temp
+            </button>
+        }
+    </ul>
+
+     <!-- Rent Section -->
+    <div class="form-section">
+        <div class="form-row">
+            <div class="form-field">
+                <label for=validationDefault>Book ID</label>
+                <input @bind="bookId" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault>Member ID</label>
+                <input @bind="memberId" placeholder="Member ID" />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault>Librarian ID</label>
+                <input @bind="librarianId" placeholder="Librarian ID" />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault>Rental Date</label>
+                <input type="date" @bind="rentDate" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault>Expiry Date</label>
+                <input @bind="dueDate" disabled />
+            </div>
+        </div>
+        <div class="form-row">
+            <button class="btn" @onclick="RentBook">Rent Book</button>
+        </div>
+        </div>
+
+        
+     <!-- Search Rentals Section -->
+        <div class="form-section">
+        <div class="form-row">
+            <div class="form-field">
+                <label>Rent ID</label>
+                <input @bind="inputId" placeholder="Rent ID" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <button class="btn" @onclick="() => SearchRent(inputId)">Search Rent</button>
+        </div>
+    </div>
+
+        <!-- Rental List -->
+    <ul class="results-list">
+        @foreach (var temp in records)
+        {
+            <button @onclick="() => SelectRent(temp)">
+                    @temp
+            </button>
+        }
+    </ul>
+
+
+      <!-- Return Section -->
+    <div class="form-section">
+        <div class="form-row">
+            <div class="form-field">
+                <label for=validationDefault2>Rental ID</label>
+                <input @bind="rentId" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault2>Member ID</label>
+                <input @bind="memberId2" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault2>Book ID</label>
+                <input @bind="bookId2" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault>Librarian ID</label>
+                <input @bind="librarianId2" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault2>Rental Date</label>
+                <input @bind="rentDate2" disabled />
+            </div>
+            <div class="form-field">
+                <label for=validationDefault2>Expiry Date</label>
+                <input @bind="dueDate2" disabled />
+            </div>
+             <div class="form-field">
+                <label for=validationDefault2>Return Date</label>
+                <input input type="date" disabled />
+            </div>
+             <div class="form-field">
+                <label for=validationDefault2>Penalty</label>
+                <input @bind="penalty" disabled />
+            </div>
+        </div>
+    </div>
+    <div class="form-row">
+            <button class="btn" @onclick="ReturnBook">Return Book</button>
+        </div>
+
+</div>
+
+@code {
+    RentDetail rental = new RentDetail();
+    List<Book> books = new List<Book>();
+    List<RentDetail> records = new List<RentDetail>();
+    int rentId = 0;
+    int memberId  = 0;
+    int librarianId = 0;
+    DateTime rentDate = DateTime.Today;
+    int rentDetailId = 0;
+    int bookId = 0;
+    DateTime dueDate = DateTime.Today.AddDays(30);
+    int bookId2 = 0;
+    int rentId2 = 0;
+    int memberId2 = 0;
+    int librarianId2 = 0;
+    DateTime rentDate2 = DateTime.Today;
+    DateTime dueDate2 = DateTime.Today;
+
+    string rentBookName = "";
+    int inputId = 0;
+    double penalty = 0.0;
+    DateTime returnDate = DateTime.Today;
+
+    protected async override void OnInitialized()// Ensure components initializes properly
+{
+    base.OnInitialized(); 
+
+    books = RentManager.SearchBook(""); 
+    books.Clear();
+    if (rentId > 0)
+    {
+        records = RentManager.SearchRent(rentId); // get rental details
+
+        if (records.Count > 0)
+        {
+            var rentalInfo = records[0]; // take the first record
+
+            rentId = rentalInfo.RentId;
+            rentDetailId = rentalInfo.RentDetailId;
+            bookId = rentalInfo.BookId;
+            memberId = rentalInfo.MemberId;
+            librarianId = rentalInfo.LibrarianId;
+            rentDate = rentalInfo.RentDate;
+            dueDate = rentalInfo.RentDate.AddDays(30);
+            returnDate = rentalInfo.ReturnDate;
+
+            this.StateHasChanged(); // update the UI
+        }
+    }
+        
+}
+
+    public List<Book> SearchBooks(string rentBookName) //search for books by name and genrate results from database
+    {
+      
+        books.Clear();
+        books = RentManager.SearchBook(rentBookName);
+        return books;
+    }
+
+    private async void SelectBook(Book temp)// Select a book from the search results
+    {
+
+        if (temp.Availability == 0)
+        {
+            //Presnt a message that the book is not available
+            await Application.Current.MainPage.DisplayAlert("Not Available", "This book is currently not available.", "OK");
+            return;
+        }
+
+        bookId = temp.BookId;
+        memberId = 0; //Reset member name when selecting a book
+        librarianId = 0;
+        rentDate = DateTime.Today;
+    }
+
+
+
+    private async void RentBook()//rent book and add the rental record to the database
+    {
+        rental.RentDate = rentDate;
+        rental.MemberId = memberId;
+        rental.LibrarianId = librarianId;
+        rental.BookId = bookId;
+        rental.DueDate = rentDate.AddDays(30);
+
+      
+        string message = RentManager.RentBook(rental);
+        await Application.Current.MainPage.DisplayAlert("Success", message, "OK");
+    }
+
+    public List<RentDetail> SearchRent(int inputId) //search for rental records by member name and genrate results from database
+    {
+        records.Clear();
+            records = RentManager.SearchRent(inputId);
+            return records;
+        }
+
+        private void SelectRent(RentDetail temp)// Select a rental record from the search results
+        {
+
+            rentDetailId = temp.RentDetailId;
+            bookId2 = temp.BookId;
+            dueDate2 = temp.RentDate.AddDays(30);
+            returnDate = DateTime.Today;
+            rentId = temp.RentId;
+            memberId2 = temp.MemberId;
+            librarianId2 = temp.LibrarianId;
+            rentDate2 = temp.RentDate;
+            // Check if the book is returned late and calculate penalty
+            penalty = CalculatePenalty();
+        
+       
+        }
+
+    private async void ReturnBook()//Return a rented book and update the rental record in the database
+    {
+        rental.RentDetailId = rentDetailId;
+        rental.ReturnDate = returnDate;
+
+        string message = RentManager.ReturnBook(rentDetailId, returnDate);
+        await Application.Current.MainPage.DisplayAlert("Success", message, "OK");
+
+    }
+
+    private double CalculatePenalty()
+    {
+        if (returnDate > dueDate2)
+        {
+            penalty = (returnDate - dueDate2).TotalDays * 5;
+        }
+        else
+        {
+            penalty = 0.0;
+        }
+        return penalty;
+    }
+
+  
+}

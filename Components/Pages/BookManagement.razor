@@ -1,0 +1,221 @@
+﻿
+@page "/books"
+@using LibraDesk.Models
+
+<div class="page-container">
+    <h3>Book Management</h3>
+ <!-- Add Book -->
+    <div class="form-row">
+        <div class="form-field">
+        <label>Title</label>
+                <input @bind="bookName" placeholder="Enter Title" />
+            </div>
+    <div class="form-field">
+        <label>Author</label>
+        <input @bind="authorName" placeholder="Enter Author" />
+    </div>
+    <div class="form-field">
+        <label>Enter Genre ID</label>
+        <input @bind="genreId" placeholder="Enter Genre ID" />
+    </div>
+    <div class="form-field">
+        <label>Publisher ID</label>
+        <input @bind="publishId" placeholder="Enter Publisher ID" />
+    </div>
+    <div class="form-field">
+        <label>Quantity ID</label>
+        <input @bind="amount" placeholder="Enter Quantity ID" />
+    </div>
+    <div class="form-field">
+        <label>Availablty</label>
+        <select @bind="availability">
+            <option value=1>Yes</option>
+            <option value=0>No</option>
+        </select>
+    </div>
+            <div class="form-buttons">
+                <button class="btn" @onclick="AddBook">Add</button>
+            </div>
+        </div>
+    
+
+    <div class="form-section">
+        <!-- Search -->
+        <div class="form-row">
+            <div class="form-field">
+                <label>Search Name</label>
+            <input @bind="searchBookName" placeholder="Search by Name" />
+            </div>
+        <button class="btn search-btn" @onclick="() => SearchBooks(searchBookName)">Search</button>
+        </div>
+
+        <ul class="results-list">
+        @foreach (var temp in books)
+            {
+                <li @onclick="() => SelectBook(temp)" style="cursor:pointer">
+                    @temp
+                </li>
+            }
+        </ul>
+
+        <!-- Edit/Delete Books -->
+        <div class="form-row">
+            <div class="form-field">
+                <label>ID</label>
+                <input @bind="bookId" disabled />
+            </div>
+            <div class="form-field">
+                <label>Author</label>
+                <input @bind="authorName2" placeholder="Enter Author" />
+            </div>
+            <div class="form-field">
+                <label>Enter Genre ID</label>
+                <input @bind="genreId2" placeholder="Enter Genre ID" />
+            </div>
+            <div class="form-field">
+                <label>Publisher ID</label>
+                <input @bind="publishId2" placeholder="Enter Publisher ID" />
+            </div>
+            <div class="form-field">
+                <label>Quantity</label>
+                <input @bind="amount2" placeholder="Enter Quantity of the book" />
+            </div>
+            <div class="form-field">
+                <label>Availablty</label>
+                <select @bind="availability2">
+                    <option value=1>Yes</option>
+                    <option value=0>No</option>
+                </select>
+            </div>
+            </div>
+                <button class="btn" @onclick="EditBook">Edit</button>
+                <button class="btn" @onclick="RemoveBook">Remove</button>
+            </div>
+</div>
+       
+    
+
+@code {
+    new Book book = new Book();
+    BookManager bookManager = new BookManager();
+    string searchBookName="";
+
+    int bookId = 0;
+    string bookName = "";
+    string authorName = "";
+    int genreId = 0;
+    int publishId = 0;
+    int amount = 0;
+    int availability = 0;
+
+    string selectedBook = "";
+
+    string bookName2 = "";
+    string authorName2 = "";
+    int genreId2 = 0;
+    int publishId2 = 0;
+    int amount2 = 0;
+    int availability2 = 0;
+
+    private List<Book> books = new List<Book>();
+
+    protected async override void OnInitialized()
+    {
+        base.OnInitialized();
+        books = RentManager.SearchBook("");
+        books.Clear();
+    }
+
+    public List<Book> SearchBooks(string rentBookName) //search for books by name and genrate results from database
+    {
+
+        books.Clear();
+        books = RentManager.SearchBook(rentBookName);
+        return books;
+    }
+
+    private async void SelectBook(Book temp)// Select a book from the search results
+    {
+
+
+        bookId = temp.BookId;
+        bookName2 = temp.BookName;
+        authorName2 = temp.AuthorName;
+        genreId2 = temp.GenreId;
+        publishId2 = temp.PublishId;
+        amount2 = temp.Amount;
+        availability2 = temp.Availability;
+    }
+
+    private async void AddBook() // Add a new book
+    {
+        
+        if (string.IsNullOrWhiteSpace(bookName)) return;
+
+        try
+        {
+            Book newBook = new Book
+            {
+                BookName = bookName,
+                AuthorName = authorName,
+                GenreId = genreId,
+                PublishId = publishId,
+                Amount = amount,
+                Availability = availability
+            };
+            bookManager.AddBook(newBook);
+
+            books = RentManager.SearchBook(""); // refresh
+            await Application.Current.MainPage.DisplayAlert("Success", $"Book added!", "OK");
+
+            // reset form
+            bookName = authorName = "";
+            genreId = publishId = amount = availability = 0;
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+        }
+    }
+
+    private async void EditBook()  // Edit an existing book
+    {
+        if (bookId == 0) return;
+
+        try
+        {
+            Book editBook = new Book
+            {
+                BookId = bookId,
+                BookName = bookName2,
+                AuthorName = authorName2,
+                GenreId = genreId2,
+                PublishId = publishId2,
+                Amount = amount2,
+                Availability = availability2
+            };
+            bookManager.EditBook(editBook);
+
+            books = RentManager.SearchBook(""); // refresh
+            await Application.Current.MainPage.DisplayAlert("Success", "Book updated!", "OK");
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+        }
+    }
+
+    private async void RemoveBook() // Remove a book
+    {
+        if (bookId == 0) return;
+
+        bookManager.RemoveBook(bookId);
+        books = RentManager.SearchBook(""); // refresh
+        await Application.Current.MainPage.DisplayAlert("Success", "Book removed!", "OK");
+
+        bookId = amount2 = genreId2 = publishId2 = availability2 = 0;
+        bookName2 = authorName2 = "";
+    }
+}
+
+

@@ -1,0 +1,150 @@
+﻿
+@page "/members"
+@using LibraDesk.Models
+
+<div class="page-container">
+    <h3>Member Management</h3>
+
+    <!-- Add Member -->
+    <div class="form-row">
+            <div class="form-field">
+                <label>Name</label>
+                <input @bind="memberName" placeholder="Enter Name" />
+            </div>
+            <div class="form-buttons">
+                <button class="btn" @onclick="AddMember">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <!-- Search -->
+        <div class="form-row">
+            <div class="form-field">
+                <label>Search Name</label>
+            <input @bind="selectedMember" placeholder="Search by Name" />
+            </div>
+        <button class="btn search-btn" @onclick="() => SearchMember(selectedMember)">Search</button>
+        </div>
+
+        <ul class="results-list">
+            @foreach (var temp in members)
+            {
+                <li @onclick="() => SelectMember(temp)" style="cursor:pointer">
+                    @temp
+                </li>
+            }
+        </ul>
+
+        <!-- Add/Edit -->
+        <div class="form-row">
+            <div class="form-field">
+                <label>ID</label>
+                <input @bind="memberId" disabled/>
+            </div>
+            <div class="form-field">
+                <label>Name</label>
+                <input @bind="memberName2" placeholder="Enter Name" />
+            </div>
+            <div class="form-buttons">
+                <button class="btn" @onclick="EditMember">Edit</button>
+                <button class="btn" @onclick="RemoveMember">Remove</button>
+            </div>
+        </div>
+    </div>
+
+@code {
+
+    Member member = new Member();
+    List<Member> members = new List<Member>();
+    int memberId = 0;
+    string memberName = "";
+    string memberName2 = "";
+   
+    string selectedMember = "";
+
+    // Initialize component (load members if needed)
+    protected async override void OnInitialized()
+    {
+        base.OnInitialized();
+        members = MemberManager.SearchMember(""); // Load all members initially
+        members.Clear();
+    }
+
+    // Search members by ID or Name
+    public List<Member> SearchMember(string name)
+    {
+        members.Clear();
+        members = MemberManager.SearchMember(name);
+        return members;
+    }
+
+    // Select a member from the search results
+    private void SelectMember(Member temp)
+    {
+        if (temp == null)
+            return;
+
+        memberId = temp.MemberId;
+        memberName2 = temp.MemberName;
+    }
+
+    // Add a new member
+    private async void AddMember()
+    {
+        if (string.IsNullOrWhiteSpace(memberName))
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", "Member name cannot be empty.", "OK");
+            return;
+        }
+
+        Member newMember = new Member();
+        newMember.MemberName = memberName;
+        MemberManager.AddMember(newMember);
+
+        members = MemberManager.SearchMember(""); // Refresh list
+        await Application.Current.MainPage.DisplayAlert("Success", $"Member added! ID: {newMember.MemberId}", "OK");
+
+        // Reset form
+        memberName = "";
+    }
+
+    // Edit selected member
+    private async void EditMember()
+    {
+        if (memberId == 0)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", "Select a member first.", "OK");
+            return;
+        }
+
+        member.MemberName = memberName2;
+        MemberManager.EditMember(member);
+
+        members = MemberManager.SearchMember(""); // Refresh list
+        await Application.Current.MainPage.DisplayAlert("Success", "Member updated!", "OK");
+
+        // Reset form
+        memberId = 0;
+        memberName2 = "";
+    }
+
+    // Remove selected member
+    private async void RemoveMember()
+    {
+        if (memberId == 0)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", "Select a member first.", "OK");
+            return;
+        }
+
+        MemberManager.RemoveMember(memberId);
+
+        members = MemberManager.SearchMember(""); // Refresh list
+        await Application.Current.MainPage.DisplayAlert("Success", "Member removed!", "OK");
+
+        // Reset form
+        memberId = 0;
+        memberName2 = "";
+    }
+}
